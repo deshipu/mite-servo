@@ -195,24 +195,25 @@ void SysTick_Handler(void) {
     // If more than this number of ticks elapse before the trigger is reset,
     // you may miss your next interrupt trigger
     // (Make sure the IQR is lightweight and CMP value is reasonable)
-    SysTick->CMP += SYSTICK_ONE_MILLISECOND * 20; // 50Hz
+    SysTick->CMP += SYSTICK_ONE_MILLISECOND * 10; // 100Hz
     // Clear the trigger state for the next IRQ
     SysTick->SR = 0x00000000;
 
     systick_ticks++;
 
-    TIM1->CH1CVR = i2c_registers[0] | (i2c_registers[1] << 8);
-    TIM1->CH4CVR = i2c_registers[2] | (i2c_registers[3] << 8);
-    TIM2->CH2CVR = i2c_registers[4] | (i2c_registers[5] << 8);
-    TIM1->CH3CVR = i2c_registers[6] | (i2c_registers[7] << 8);
-
-    TIM2->CH4CVR = i2c_registers[8] | (i2c_registers[9] << 8);
-    TIM2->CH1CVR = i2c_registers[10] | (i2c_registers[11] << 8);
-    TIM2->CH3CVR = i2c_registers[12] | (i2c_registers[13] << 8);
-    TIM1->CH2CVR = i2c_registers[14] | (i2c_registers[15] << 8);
-
-    TIM1->CTLR1 |= TIM_CEN;
-    TIM2->CTLR1 |= TIM_CEN;
+    if (systick_ticks & 0x01) {
+        TIM1->CH1CVR = i2c_registers[0] | (i2c_registers[1] << 8);
+        TIM1->CH2CVR = i2c_registers[14] | (i2c_registers[15] << 8);
+        TIM1->CH3CVR = i2c_registers[6] | (i2c_registers[7] << 8);
+        TIM1->CH4CVR = i2c_registers[2] | (i2c_registers[3] << 8);
+        TIM1->CTLR1 |= TIM_CEN;
+    } else {
+        TIM2->CH1CVR = i2c_registers[10] | (i2c_registers[11] << 8);
+        TIM2->CH2CVR = i2c_registers[4] | (i2c_registers[5] << 8);
+        TIM2->CH3CVR = i2c_registers[12] | (i2c_registers[13] << 8);
+        TIM2->CH4CVR = i2c_registers[8] | (i2c_registers[9] << 8);
+        TIM2->CTLR1 |= TIM_CEN;
+    }
 }
 
 int main() {
