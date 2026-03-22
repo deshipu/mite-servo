@@ -11,9 +11,9 @@ volatile uint32_t systick_ticks;
 volatile uint8_t i2c_registers[16] = {0x00};
 
 /*
- * initialize TIM1 for PWM
+ * initialize TIM1 for one-shot
  */
-void t1pwm_init(void) {
+void timer1_init(void) {
     // Enable GPIOA, GPIOC, GPIOD and TIM1
     RCC->APB2PCENR |= RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOD |
         RCC_APB2Periph_GPIOC | RCC_APB2Periph_TIM1;
@@ -64,11 +64,11 @@ void t1pwm_init(void) {
     // CH4 Mode is output, PWM1 (CC1S = 00, OC1M = 110)
     TIM1->CHCTLR2 |= TIM_OC4M_2 | TIM_OC4M_1;
 
-    // Set the Capture Compare Register value to 50% initially
-    TIM1->CH1CVR = 128;
-    TIM1->CH2CVR = 128;
-    TIM1->CH3CVR = 128;
-    TIM1->CH4CVR = 128;
+    // Set the Capture Compare Register value to 0% initially
+    TIM1->CH1CVR = 0;
+    TIM1->CH2CVR = 0;
+    TIM1->CH3CVR = 0;
+    TIM1->CH4CVR = 0;
 
     // Enable TIM1 outputs
     TIM1->BDTR |= TIM_MOE;
@@ -76,6 +76,79 @@ void t1pwm_init(void) {
     TIM1->CTLR1 |= TIM_CEN;
 }
 
+/*
+ * initialize TIM2 for one-shot
+ */
+void timer2_init(void) {
+    // Enable GPIOC, GPIOD and TIM2
+    RCC->APB2PCENR |= RCC_APB2Periph_GPIOD | RCC_APB2Periph_GPIOC;
+    RCC->APB1PCENR |= RCC_APB1Periph_TIM2;
+
+    RCC->APB2PCENR |= RCC_APB2Periph_AFIO; // turn on remapping
+    // Use alternate pins.
+    AFIO->PCFR1 |= AFIO_PCFR1_TIM2_REMAP_FULLREMAP;
+
+    // PC1
+    GPIOC->CFGLR &= ~(0xf << (4 * 1));
+    GPIOC->CFGLR |= (GPIO_Speed_50MHz | GPIO_CNF_OUT_PP_AF) << (4 * 1);
+    // PC7
+    GPIOC->CFGLR &= ~(0xf << (4 * 7));
+    GPIOC->CFGLR |= (GPIO_Speed_50MHz | GPIO_CNF_OUT_PP_AF) << (4 * 7);
+    // PD6
+    GPIOD->CFGLR &= ~(0xf << (4 * 6));
+    GPIOD->CFGLR |= (GPIO_Speed_10MHz | GPIO_CNF_OUT_PP_AF) << (4 * 6);
+    // PD5
+    GPIOD->CFGLR &= ~(0xf << (4 * 5));
+    GPIOD->CFGLR |= (GPIO_Speed_10MHz | GPIO_CNF_OUT_PP_AF) << (4 * 5);
+
+    // Reset TIM2 to init all regs
+    RCC->APB1PRSTR |= RCC_APB1Periph_TIM2;
+    RCC->APB1PRSTR &= ~RCC_APB1Periph_TIM2;
+
+    // CTLR1: default is up, events generated, edge align
+    // SMCFGR: default clk input is CK_INT
+
+    // Prescaler
+    TIM2->PSC = 0x0001;
+    // Auto Reload - sets period
+    TIM2->ATRLR = 0xffff;
+    // One-pulse mode
+    TIM2->CTLR1 |= TIM_OPM;
+    // direction
+    TIM2->CTLR1 |= TIM_DIR;
+    // Reload immediately
+    TIM2->SWEVGR |= TIM_UG;
+    // Enable CH1 output, negative pol
+    TIM2->CCER |= TIM_CC1E; // | TIM_CC1P;
+    // Enable CH2 output, negative pol
+    TIM2->CCER |= TIM_CC2E; // | TIM_CC2P;
+    // Enable CH3 output, negative pol
+    TIM2->CCER |= TIM_CC3E; // | TIM_CC3P;
+    // Enable CH4 output, negative pol
+    TIM2->CCER |= TIM_CC4E; // | TIM_CC4P;
+    // CH1 Mode is output, PWM1 (CC1S = 00, OC1M = 110)
+    TIM2->CHCTLR1 |= TIM_OC1M_2 | TIM_OC1M_1;
+    // CH2 Mode is output, PWM1 (CC1S = 00, OC1M = 110)
+    TIM2->CHCTLR1 |= TIM_OC2M_2 | TIM_OC2M_1;
+    // CH3 Mode is output, PWM1 (CC1S = 00, OC1M = 110)
+    TIM2->CHCTLR2 |= TIM_OC3M_2 | TIM_OC3M_1;
+    // CH4 Mode is output, PWM1 (CC1S = 00, OC1M = 110)
+    TIM2->CHCTLR2 |= TIM_OC4M_2 | TIM_OC4M_1;
+
+    // Set the Capture Compare Register value to 50% initially
+    TIM2->CH1CVR = 0;
+    TIM2->CH2CVR = 0;
+    TIM2->CH3CVR = 0;
+    TIM2->CH4CVR = 0;
+
+    // initialize counter
+    //TIM2->SWEVGR |= TIM_UG;
+
+    // Enable TIM1 outputs
+    TIM2->BDTR |= TIM_MOE;
+    // Enable TIM1
+    TIM2->CTLR1 |= TIM_CEN;
+}
 
 /*
  *  initialize i2c slave
@@ -152,13 +225,23 @@ void SysTick_Handler(void) {
 //    } else {
 //        AFIO->PCFR1 = AFIO_PCFR1_TIM1_REMAP_FULLREMAP;
 //    }
+    TIM1->CH1CVR = i2c_registers[0] | (i2c_registers[1] << 8);
+    TIM1->CH2CVR = i2c_registers[2] | (i2c_registers[3] << 8);
+    TIM1->CH3CVR = i2c_registers[4] | (i2c_registers[5] << 8);
+    TIM1->CH4CVR = i2c_registers[6] | (i2c_registers[7] << 8);
     TIM1->CTLR1 |= TIM_CEN;
+    TIM2->CH1CVR = i2c_registers[8] | (i2c_registers[9] << 8);
+    TIM2->CH2CVR = i2c_registers[10] | (i2c_registers[11] << 8);
+    TIM2->CH3CVR = i2c_registers[12] | (i2c_registers[13] << 8);
+    TIM2->CH4CVR = i2c_registers[14] | (i2c_registers[15] << 8);
+    TIM2->CTLR1 |= TIM_CEN;
 }
 
 int main() {
     SystemInit();
     funGpioInitAll();
-    t1pwm_init();
+    timer1_init();
+    timer2_init();
     i2c_init();
 
     t1pwm_setpw(0, 0x8cef);
