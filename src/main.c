@@ -163,26 +163,6 @@ void i2c_init(void) {
 }
 
 /*
- * set timer channel PW
- */
-void t1pwm_setpw(uint8_t chl, uint16_t width) {
-    switch (chl & 3) {
-    case 0:
-	TIM1->CH1CVR = width;
-	break;
-    case 1:
-	TIM1->CH2CVR = width;
-	break;
-    case 2:
-	TIM1->CH3CVR = width;
-	break;
-    case 3:
-	TIM1->CH4CVR = width;
-	break;
-    }
-}
-
-/*
  * Initialises the SysTick to trigger an IRQ with auto-reload, using HCLK/1 as
  * its clock source
  */
@@ -220,36 +200,28 @@ void SysTick_Handler(void) {
     SysTick->SR = 0x00000000;
 
     systick_ticks++;
-//    if (systick_ticks & 1) {
-//        AFIO->PCFR1 = AFIO_PCFR1_TIM1_REMAP_NOREMAP;
-//    } else {
-//        AFIO->PCFR1 = AFIO_PCFR1_TIM1_REMAP_FULLREMAP;
-//    }
+
     TIM1->CH1CVR = i2c_registers[0] | (i2c_registers[1] << 8);
-    TIM1->CH2CVR = i2c_registers[2] | (i2c_registers[3] << 8);
-    TIM1->CH3CVR = i2c_registers[4] | (i2c_registers[5] << 8);
-    TIM1->CH4CVR = i2c_registers[6] | (i2c_registers[7] << 8);
-    TIM1->CTLR1 |= TIM_CEN;
-    TIM2->CH1CVR = i2c_registers[8] | (i2c_registers[9] << 8);
-    TIM2->CH2CVR = i2c_registers[10] | (i2c_registers[11] << 8);
+    TIM1->CH4CVR = i2c_registers[2] | (i2c_registers[3] << 8);
+    TIM2->CH2CVR = i2c_registers[4] | (i2c_registers[5] << 8);
+    TIM1->CH3CVR = i2c_registers[6] | (i2c_registers[7] << 8);
+
+    TIM2->CH4CVR = i2c_registers[8] | (i2c_registers[9] << 8);
+    TIM2->CH1CVR = i2c_registers[10] | (i2c_registers[11] << 8);
     TIM2->CH3CVR = i2c_registers[12] | (i2c_registers[13] << 8);
-    TIM2->CH4CVR = i2c_registers[14] | (i2c_registers[15] << 8);
+    TIM1->CH2CVR = i2c_registers[14] | (i2c_registers[15] << 8);
+
+    TIM1->CTLR1 |= TIM_CEN;
     TIM2->CTLR1 |= TIM_CEN;
 }
 
 int main() {
     SystemInit();
-    funGpioInitAll();
     timer1_init();
     timer2_init();
     i2c_init();
-
-    t1pwm_setpw(0, 0x8cef);
-    t1pwm_setpw(1, 0x3cef);
-    t1pwm_setpw(2, 0x4cef);
-    t1pwm_setpw(3, 6400);
-
     systick_init();
+
     while (1) {
 	Delay_Ms(250);
     }
