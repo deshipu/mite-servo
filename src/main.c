@@ -156,7 +156,7 @@ void timer2_init(void) {
 void i2c_init(void) {
     RCC->APB2PCENR |= RCC_APB2Periph_AFIO; // turn on remapping
     funPinMode(PC6, GPIO_CFGLR_OUT_10Mhz_AF_OD); // SDA
-    funPinMode(PD5, GPIO_CFGLR_OUT_10Mhz_AF_OD); // SCL
+    funPinMode(PC5, GPIO_CFGLR_OUT_10Mhz_AF_OD); // SCL
     AFIO->PCFR1 |= AFIO_PCFR1_I2C1_HIGH_BIT_REMAP; // set high bit = 1  (I2C1REMAP1)
     AFIO->PCFR1 |= AFIO_PCFR1_I2C1_REMAP; // set low bit [ignored / don't care]    (I2C1_RM)
     SetupI2CSlave(I2C_ADDRESS, i2c_registers, sizeof(i2c_registers), NULL, NULL, false);
